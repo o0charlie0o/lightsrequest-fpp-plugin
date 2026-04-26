@@ -17,7 +17,7 @@ $(document).ready(async () => {
   //Component Handlers
   $('#remoteTokenInput').blur(async () => {
     const tokenValue = $('#remoteTokenInput').val();
-    await FPPPost('/api/plugin/remote-falcon/settings/remoteToken', tokenValue, async () => {
+    await FPPPost('/api/plugin/lightsrequest-fpp-plugin/settings/remoteToken', tokenValue, async () => {
       // Add delay to ensure file system writes complete
       await new Promise(resolve => setTimeout(resolve, 500));
 
@@ -45,7 +45,7 @@ $(document).ready(async () => {
 
   $('#interruptScheduleCheckbox').change(async () => {
     const isChecked = $('#interruptScheduleCheckbox').is(':checked');
-    await FPPPost('/api/plugin/remote-falcon/settings/interruptSchedule', isChecked.toString(), async () => {
+    await FPPPost('/api/plugin/lightsrequest-fpp-plugin/settings/interruptSchedule', isChecked.toString(), async () => {
       await getPluginConfig();
       $.jGrowl(isChecked ? "Interrupt Scheduled Enabled" : "Interrupt Scheduled Disabled", { themeState: 'success' });
       await restartListener();
@@ -69,7 +69,7 @@ $(document).ready(async () => {
   });
 
   $('#requestFetchTimeInput').blur(async () => {
-    await FPPPost('/api/plugin/remote-falcon/settings/requestFetchTime', $('#requestFetchTimeInput').val().toString(), async () => {
+    await FPPPost('/api/plugin/lightsrequest-fpp-plugin/settings/requestFetchTime', $('#requestFetchTimeInput').val().toString(), async () => {
       await getPluginConfig();
       $.jGrowl("Request/Vote Fetch Time Saved", { themeState: 'success' });
       await restartListener();
@@ -77,7 +77,7 @@ $(document).ready(async () => {
   });
 
   $('#additionalWaitTimeInput').blur(async () => {
-    await FPPPost('/api/plugin/remote-falcon/settings/additionalWaitTime', $('#additionalWaitTimeInput').val().toString(), async () => {
+    await FPPPost('/api/plugin/lightsrequest-fpp-plugin/settings/additionalWaitTime', $('#additionalWaitTimeInput').val().toString(), async () => {
       await getPluginConfig();
       $.jGrowl("Additional Wait Time Saved", { themeState: 'success' });
       await restartListener();
@@ -85,7 +85,7 @@ $(document).ready(async () => {
   });
 
   $('#fppStatusCheckTimeInput').blur(async () => {
-    await FPPPost('/api/plugin/remote-falcon/settings/fppStatusCheckTime', $('#fppStatusCheckTimeInput').val().toString(), async () => {
+    await FPPPost('/api/plugin/lightsrequest-fpp-plugin/settings/fppStatusCheckTime', $('#fppStatusCheckTimeInput').val().toString(), async () => {
       await getPluginConfig();
       $.jGrowl("FPP Status Check Time Saved", { themeState: 'success' });
       await restartListener();
@@ -93,7 +93,7 @@ $(document).ready(async () => {
   });
 
   $('#pluginsApiPathInput').blur(async () => {
-    await FPPPost('/api/plugin/remote-falcon/settings/pluginsApiPath', $('#pluginsApiPathInput').val().toString(), async () => {
+    await FPPPost('/api/plugin/lightsrequest-fpp-plugin/settings/pluginsApiPath', $('#pluginsApiPathInput').val().toString(), async () => {
       await getPluginConfig();
       $.jGrowl("API Base URL Saved", { themeState: 'success' });
       await restartListener();
@@ -102,7 +102,7 @@ $(document).ready(async () => {
 
   $('#verboseLoggingCheckbox').change(async () => {
     const isChecked = $('#verboseLoggingCheckbox').is(':checked');
-    await FPPPost('/api/plugin/remote-falcon/settings/verboseLogging', isChecked.toString(), async () => {
+    await FPPPost('/api/plugin/lightsrequest-fpp-plugin/settings/verboseLogging', isChecked.toString(), async () => {
       await getPluginConfig();
       $.jGrowl(isChecked ? "Verbose Logging Enabled" : "Verbose Logging Disabled", { themeState: 'success' });
       await restartListener();
@@ -112,7 +112,7 @@ $(document).ready(async () => {
   $('#autoSyncMetadataCheckbox').change(async () => {
     const isChecked = $('#autoSyncMetadataCheckbox').is(':checked');
     AUTO_SYNC_METADATA = isChecked;
-    await FPPPost('/api/plugin/remote-falcon/settings/autoSyncMetadata', isChecked.toString(), () => {
+    await FPPPost('/api/plugin/lightsrequest-fpp-plugin/settings/autoSyncMetadata', isChecked.toString(), () => {
       $.jGrowl(isChecked ? "Metadata sync enabled" : "Metadata sync disabled", { themeState: 'success' });
     });
   });
@@ -372,7 +372,7 @@ async function syncPlaylistToRF() {
         if(xhr?.status === 200) {
           updateSyncProgress('Sync complete', 100);
           REMOTE_PLAYLIST = $('#remotePlaylistSelect').val();
-          await FPPPost('/api/plugin/remote-falcon/settings/remotePlaylist', REMOTE_PLAYLIST, async () => {
+          await FPPPost('/api/plugin/lightsrequest-fpp-plugin/settings/remotePlaylist', REMOTE_PLAYLIST, async () => {
             $.jGrowl("Remote Playlist Saved", { themeState: 'success' });
             await restartListener();
           });
@@ -498,7 +498,7 @@ async function runConnectivityTest(showToast = false) {
 }
 
 async function stopListener() {
-  await FPPPost('/api/plugin/remote-falcon/settings/remoteFalconListenerEnabled', 'false', () => {});
+  await FPPPost('/api/plugin/lightsrequest-fpp-plugin/settings/remoteFalconListenerEnabled', 'false', () => {});
   await getPluginConfig();
   $('#remoteFalconStatus').html(getRemoteFalconListenerEnabledStatus(REMOTE_FALCON_LISTENER_ENABLED));
   $.jGrowl("Stopped Listener", { themeState: 'success' });

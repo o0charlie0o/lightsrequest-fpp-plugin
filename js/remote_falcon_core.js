@@ -15,20 +15,20 @@ var VERBOSE_LOGGING = null;
 var AUTO_SYNC_METADATA = false;
 
 async function saveDefaultPluginConfig() {
-  await FPPGet('/api/plugin/remote-falcon/settings/init', async (data) => {
+  await FPPGet('/api/plugin/lightsrequest-fpp-plugin/settings/init', async (data) => {
     var init = data?.init;
     if(!init) {
-      await FPPPost('/api/plugin/remote-falcon/settings/init', 'true', () => {});
-      await FPPPost('/api/plugin/remote-falcon/settings/remoteToken', '', () => {});
-      await FPPPost('/api/plugin/remote-falcon/settings/remoteFalconListenerEnabled', 'true', () => {});
-      await FPPPost('/api/plugin/remote-falcon/settings/remoteFalconListenerRestarting', 'false', () => {});
-      await FPPPost('/api/plugin/remote-falcon/settings/interruptSchedule', 'false', () => {});
-      await FPPPost('/api/plugin/remote-falcon/settings/requestFetchTime', '3', () => {});
-      await FPPPost('/api/plugin/remote-falcon/settings/additionalWaitTime', '0', () => {});
-      await FPPPost('/api/plugin/remote-falcon/settings/fppStatusCheckTime', '1', () => {});
-      await FPPPost('/api/plugin/remote-falcon/settings/pluginsApiPath', PLUGINS_API_PATH, () => {});
-      await FPPPost('/api/plugin/remote-falcon/settings/verboseLogging', 'false', () => {});
-      await FPPPost('/api/plugin/remote-falcon/settings/autoSyncMetadata', 'false', () => {});
+      await FPPPost('/api/plugin/lightsrequest-fpp-plugin/settings/init', 'true', () => {});
+      await FPPPost('/api/plugin/lightsrequest-fpp-plugin/settings/remoteToken', '', () => {});
+      await FPPPost('/api/plugin/lightsrequest-fpp-plugin/settings/remoteFalconListenerEnabled', 'true', () => {});
+      await FPPPost('/api/plugin/lightsrequest-fpp-plugin/settings/remoteFalconListenerRestarting', 'false', () => {});
+      await FPPPost('/api/plugin/lightsrequest-fpp-plugin/settings/interruptSchedule', 'false', () => {});
+      await FPPPost('/api/plugin/lightsrequest-fpp-plugin/settings/requestFetchTime', '3', () => {});
+      await FPPPost('/api/plugin/lightsrequest-fpp-plugin/settings/additionalWaitTime', '0', () => {});
+      await FPPPost('/api/plugin/lightsrequest-fpp-plugin/settings/fppStatusCheckTime', '1', () => {});
+      await FPPPost('/api/plugin/lightsrequest-fpp-plugin/settings/pluginsApiPath', PLUGINS_API_PATH, () => {});
+      await FPPPost('/api/plugin/lightsrequest-fpp-plugin/settings/verboseLogging', 'false', () => {});
+      await FPPPost('/api/plugin/lightsrequest-fpp-plugin/settings/autoSyncMetadata', 'false', () => {});
       $.jGrowl("Default Config Saved", { themeState: 'success' });
     }
   })
@@ -49,40 +49,40 @@ async function savePluginVersionAndFPPVersionToRF() {
 }
 
 async function getPluginConfig() {
-  await FPPGet('/api/plugin/remote-falcon/settings/pluginVersion', (data) => {
+  await FPPGet('/api/plugin/lightsrequest-fpp-plugin/settings/pluginVersion', (data) => {
     PLUGIN_VERSION = data?.pluginVersion;
   });
-  await FPPGet('/api/plugin/remote-falcon/settings/remoteToken', (data) => {
+  await FPPGet('/api/plugin/lightsrequest-fpp-plugin/settings/remoteToken', (data) => {
     REMOTE_TOKEN = data?.remoteToken;
   });
-  await FPPGet('/api/plugin/remote-falcon/settings/remoteFalconListenerEnabled', (data) => {
+  await FPPGet('/api/plugin/lightsrequest-fpp-plugin/settings/remoteFalconListenerEnabled', (data) => {
     REMOTE_FALCON_LISTENER_ENABLED = data?.remoteFalconListenerEnabled == 'true';
   });
-  await FPPGet('/api/plugin/remote-falcon/settings/remoteFalconListenerRestarting', (data) => {
+  await FPPGet('/api/plugin/lightsrequest-fpp-plugin/settings/remoteFalconListenerRestarting', (data) => {
     REMOTE_FALCON_LISTENER_RESTARTING = data?.remoteFalconListenerRestarting == 'true';
   });
-  await FPPGet('/api/plugin/remote-falcon/settings/interruptSchedule', (data) => {
+  await FPPGet('/api/plugin/lightsrequest-fpp-plugin/settings/interruptSchedule', (data) => {
     INTERRUPT_SCHEDULE = data?.interruptSchedule == 'true';
   });
-  await FPPGet('/api/plugin/remote-falcon/settings/requestFetchTime', (data) => {
+  await FPPGet('/api/plugin/lightsrequest-fpp-plugin/settings/requestFetchTime', (data) => {
     REQUEST_FETCH_TIME = parseInt(data?.requestFetchTime);
   });
-  await FPPGet('/api/plugin/remote-falcon/settings/additionalWaitTime', (data) => {
+  await FPPGet('/api/plugin/lightsrequest-fpp-plugin/settings/additionalWaitTime', (data) => {
     ADDITIONAL_WAIT_TIME = parseInt(data?.additionalWaitTime);
   });
-  await FPPGet('/api/plugin/remote-falcon/settings/fppStatusCheckTime', (data) => {
+  await FPPGet('/api/plugin/lightsrequest-fpp-plugin/settings/fppStatusCheckTime', (data) => {
     FPP_STATUS_CHECK_TIME = parseFloat(data?.fppStatusCheckTime);
   });
-  await FPPGet('/api/plugin/remote-falcon/settings/pluginsApiPath', (data) => {
+  await FPPGet('/api/plugin/lightsrequest-fpp-plugin/settings/pluginsApiPath', (data) => {
     PLUGINS_API_PATH = decodeURIComponent(data?.pluginsApiPath);
   });
-  await FPPGet('/api/plugin/remote-falcon/settings/verboseLogging', (data) => {
+  await FPPGet('/api/plugin/lightsrequest-fpp-plugin/settings/verboseLogging', (data) => {
     VERBOSE_LOGGING = data?.verboseLogging == 'true';
   });
-   await FPPGet('/api/plugin/remote-falcon/settings/autoSyncMetadata', (data) => {
+   await FPPGet('/api/plugin/lightsrequest-fpp-plugin/settings/autoSyncMetadata', (data) => {
     AUTO_SYNC_METADATA = data?.autoSyncMetadata == 'true';
   });
-  // await FPPGet('/api/plugin/remote-falcon/settings/remotePlaylist', (data) => {
+  // await FPPGet('/api/plugin/lightsrequest-fpp-plugin/settings/remotePlaylist', (data) => {
   //   REMOTE_PLAYLIST = data?.remotePlaylist;
   // });
   await getRemotePlaylistFromConfig();
@@ -107,7 +107,7 @@ function getRemoteFalconListenerEnabledStatus(remoteFalconListenerEnabled) {
 }
 
 async function checkPluginUpdates() {
-  await FPPPost('/api/plugin/remote-falcon/updates', {}, (data) => {
+  await FPPPost('/api/plugin/lightsrequest-fpp-plugin/updates', {}, (data) => {
     if(data?.updatesAvailable === 1) {
       $('#updatesAvailable').html('<h4 style="color:red;">A Plugin Update is Available</h4>');
     }
@@ -136,8 +136,8 @@ function normalizePlaylistName(name) {
 
 async function restartListener() {
   $.jGrowl("Restarting Listener", { themeState: 'success' });
-  await FPPPost('/api/plugin/remote-falcon/settings/remoteFalconListenerEnabled', 'false', () => {});
-  await FPPPost('/api/plugin/remote-falcon/settings/remoteFalconListenerRestarting', 'true', () => {});
+  await FPPPost('/api/plugin/lightsrequest-fpp-plugin/settings/remoteFalconListenerEnabled', 'false', () => {});
+  await FPPPost('/api/plugin/lightsrequest-fpp-plugin/settings/remoteFalconListenerRestarting', 'true', () => {});
   await getPluginConfig();
 
   await checkPlugin();
@@ -174,7 +174,7 @@ async function verifySetting(settingKey, expectedValue, maxRetries = 3, delayMs 
     await new Promise(resolve => setTimeout(resolve, delayMs));
 
     let actualValue = null;
-    await FPPGet('/api/plugin/remote-falcon/settings/' + settingKey, (data) => {
+    await FPPGet('/api/plugin/lightsrequest-fpp-plugin/settings/' + settingKey, (data) => {
       actualValue = data?.[settingKey];
     });
 
