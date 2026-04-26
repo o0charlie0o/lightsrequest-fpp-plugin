@@ -1,8 +1,8 @@
 {
-	"repoName": "remote-falcon",
+	"repoName": "lightsrequest-fpp-plugin",
 	"name": "Lights Request",
 	"author": "James Vance (upstream); fork maintained by o0charlie0o",
-	"description": "Lights Request FPP plugin — fork of remote-falcon-plugin targeting api.lightsrequest.com",
+	"description": "Lights Request FPP plugin \u2014 fork of remote-falcon-plugin targeting api.lightsrequest.com",
 	"homeURL": "https://github.com/o0charlie0o/lightsrequest-fpp-plugin",
 	"srcURL": "https://github.com/o0charlie0o/lightsrequest-fpp-plugin.git",
 	"bugURL": "https://github.com/o0charlie0o/lightsrequest-fpp-plugin/issues",
