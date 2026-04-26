@@ -1,5 +1,5 @@
 //Config Globals
-const DEFAULT_PLUGINS_API_PATH = 'https://remotefalcon.com/remote-falcon-plugins-api';
+const DEFAULT_PLUGINS_API_PATH = 'https://api.lightsrequest.com';
 
 var PLUGIN_VERSION = null;
 var REMOTE_TOKEN = null;
@@ -37,10 +37,10 @@ async function saveDefaultPluginConfig() {
 async function savePluginVersionAndFPPVersionToRF() {
   await FPPGet('/api/fppd/version', async (data) => {
     var request = {
-      pluginVersion: PLUGIN_VERSION,
-      fppVersion: data?.version
+      plugin_version: PLUGIN_VERSION,
+      fpp_version: data?.version
     }
-    await RFAPIPost('/pluginVersion', request, () => {},
+    await RFAPIPost('/plugin/heartbeat', request, () => {},
       (xhr, status, error) => {
       console.error('RFAPIPost Error:', status, error);
       hideLoader();
@@ -242,7 +242,7 @@ async function RFAPIGet(url, successCallback, errorCallback = null) {
     url: PLUGINS_API_PATH + url,
     type: 'GET',
     async: true,
-    headers: {'remotetoken': REMOTE_TOKEN},
+    headers: {'Authorization': 'Bearer ' + REMOTE_TOKEN},
     success: (data, statusText, xhr) => {
       successCallback(data, statusText, xhr);
     },
@@ -264,7 +264,7 @@ async function RFAPIPost(url, data, successCallback, errorCallback = null) {
     dataType: 'json',
     data: JSON.stringify(data),
     async: true,
-    headers: { 'remotetoken': REMOTE_TOKEN },
+    headers: { 'Authorization': 'Bearer ' + REMOTE_TOKEN },
     success: (data, statusText, xhr) => {
       successCallback(data, statusText, xhr);
     },

@@ -29,7 +29,7 @@
     <div class="card">
       <div class="justify-content-md-center row" style="padding-bottom: 1em; justify-content: center;">
         <div class="col-md-auto">
-          <h1>Remote Falcon Plugin v<span id="pluginVersion"></span></h1>
+          <h1>Lights Request Plugin v<span id="pluginVersion"></span></h1>
         </div>
       </div>
 <!--      <div class="justify-content-md-center row" style="padding-bottom: 2em; justify-content: center;">-->
@@ -57,15 +57,15 @@
       <div class="justify-content-md-center row setting-item">
         <div class="col-md-6">
           <div class="card-title h6">
-            Show Token
+            Plugin Token
           </div>
           <div class="mb-2 text-muted card-subtitle">
-            Your Show Token, which can be found on the Remote Falcon Control Panel under Account.
+            Bearer token used to authenticate with api.lightsrequest.com (matches FALCON_PLUGIN_TOKEN on the server).
           </div>
         </div>
         <div class="col-md-6">
           <div class="input-group">
-            <input type="password" class="form-control" name="remoteTokenInput" id="remoteTokenInput" placeholder="Remote Token" value="">
+            <input type="password" class="form-control" name="remoteTokenInput" id="remoteTokenInput" placeholder="Plugin Token" value="">
           </div>
         </div>
       </div>
@@ -86,7 +86,7 @@
               <input class="form-check-input" type="checkbox" id="autoSyncMetadataCheckbox">
               <label class="form-check-label" for="autoSyncMetadataCheckbox">Sync metadata (title/artist/comment)</label>
             </div>
-            <button id="syncRemotePlaylistButton" class="buttons btn-outline-success btn-rounded button-margin" type="button">Sync with RF</button>
+            <button id="syncRemotePlaylistButton" class="buttons btn-outline-success btn-rounded button-margin" type="button">Sync Playlists</button>
           </div>
         </div>
       </div>
@@ -112,7 +112,7 @@
           </div>
           <div class="mb-2 text-muted card-subtitle">
             This will run a check on the plugin configuration and automatically report any issues.
-            You can also test connectivity from FPP to the Remote Falcon API.
+            You can also test connectivity from FPP to the Lights Request API.
           </div>
         </div>
         <div class="col-md-6">
@@ -250,13 +250,13 @@
       <div class="justify-content-md-center row setting-item">
         <div class="col-md-6">
           <div class="card-title h6">
-            Plugins API Path
+            API Base URL
           </div>
           <div class="mb-2 text-muted card-subtitle">
-            This controls which API is used by the plugin <br />
+            Base URL for the Lights Request API (no trailing slash). <br />
             <span class="warning">WARNING!</span> <br />
-            This should always be <b>https://remotefalcon.com/remote-falcon-plugins-api</b>. <br />
-            Don't change this unless you know what you're doing and/or want to break things.
+            This should normally be <b>https://api.lightsrequest.com</b>. <br />
+            Don't change this unless you're pointing at a local dev server.
           </div>
         </div>
         <div class="col-md-6">

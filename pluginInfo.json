@@ -1,11 +1,11 @@
 {
 	"repoName": "remote-falcon",
-	"name": "Remote Falcon",
-	"author": "James Vance",
-	"description": "Allows remote control of FPP from the Remote Falcon web application (https://remotefalcon.com)",
-	"homeURL": "https://github.com/remote-falcon/remote-falcon-plugin",
-	"srcURL": "https://github.com/remote-falcon/remote-falcon-plugin.git",
-	"bugURL": "https://github.com/remote-falcon/remote-falcon-issue-tracker/issues",
+	"name": "Lights Request",
+	"author": "James Vance (upstream); fork maintained by o0charlie0o",
+	"description": "Lights Request FPP plugin — fork of remote-falcon-plugin targeting api.lightsrequest.com",
+	"homeURL": "https://github.com/o0charlie0o/lightsrequest-fpp-plugin",
+	"srcURL": "https://github.com/o0charlie0o/lightsrequest-fpp-plugin.git",
+	"bugURL": "https://github.com/o0charlie0o/lightsrequest-fpp-plugin/issues",
 	"allowUpdates": 1,
 	"versions": [
 		{
