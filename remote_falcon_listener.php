@@ -55,6 +55,12 @@ $viewerControlMode = "";
 $jukeboxEnabled = true;
 $interruptSchedule = "";
 $currentlyPlayingInRF = "";
+// Tracks whether we've already POSTed an idle/stop signal to /plugin/now-playing
+// for the current idle stretch. Mirrors upstream Remote Falcon's
+// `$rfSequencesCleared` — set to true after we clear, reset to false the
+// instant FPP starts playing again. Without this, we'd either spam the API
+// every poll while idle or never clear at all.
+$nowPlayingCleared = false;
 $requestFetchTime = "";
 $additionalWaitTime = "";
 $pluginsApiPath = "";
@@ -185,6 +191,10 @@ while(true) {
     if($fppStatus != null && $fppStatus != false) {
       $statusName = $fppStatus->status_name;
       if($statusName != "idle") {
+        // Resuming playback — re-arm the idle-clear so the next idle
+        // transition will POST a stop signal again.
+        $GLOBALS['nowPlayingCleared'] = false;
+
         $currentlyPlaying = pathinfo($fppStatus->current_sequence, PATHINFO_FILENAME);
         if($currentlyPlaying == "") {
           //Might be media only, so check for current song
@@ -199,6 +209,15 @@ while(true) {
           }else {
             doInterruptStuff($fppStatus, $requestFetchTime, $additionalWaitTime, $remotePlaylist, $pluginToken);
           }
+        }
+      }else {
+        // FPP is idle (operator stopped playback, or scheduled show ended).
+        // POST a single stop signal so the viewer's "now playing" clears.
+        // Gate on $nowPlayingCleared so we only fire once per idle stretch.
+        if(!$GLOBALS['nowPlayingCleared']) {
+          updateNowPlayingStopped($pluginToken);
+          $GLOBALS['currentlyPlayingInRF'] = "";
+          $GLOBALS['nowPlayingCleared'] = true;
         }
       }
     }else {
@@ -396,6 +415,33 @@ function updateNowPlaying($currentlyPlaying, $durationSeconds, $pluginToken) {
   $end_time = microtime(true);
   $execution_time = ($end_time - $start_time);
   logEntry_verbose("SUCCESS - /plugin/now-playing. Execution time: " . $execution_time * 1000 . " ms");
+  return true;
+}
+
+function updateNowPlayingStopped($pluginToken) {
+  $start_time = microtime(true);
+  logEntry("FPP went idle — clearing /plugin/now-playing");
+  $url = $GLOBALS['pluginsApiPath'] . "/plugin/now-playing";
+  $data = array('sequence' => null);
+  $options = array(
+    'http' => array(
+      'method'  => 'POST',
+      'timeout' => 10,
+      'content' => json_encode($data),
+      'header'=>  "Content-Type: application/json; charset=UTF-8\r\n" .
+                  "Accept: application/json\r\n" .
+                  "Authorization: Bearer $pluginToken\r\n"
+      )
+  );
+  $context = stream_context_create($options);
+  $result = @file_get_contents($url, false, $context);
+
+  if ($result === FALSE) {
+    logEntry("ERROR - Failed to POST idle /plugin/now-playing to: " . $url);
+    return false;
+  }
+  $end_time = microtime(true);
+  logEntry_verbose("SUCCESS - cleared /plugin/now-playing. Execution time: " . ($end_time - $start_time) * 1000 . " ms");
   return true;
 }
 
