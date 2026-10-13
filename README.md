@@ -118,8 +118,15 @@ packets fppd already sends (AF_PACKET + a kernel BPF filter for UDP 32320 — it
 never binds port 32320, sends nothing on the show network, and changes no FPP
 settings, so MultiSync remotes are unaffected) and POSTs the live audio
 position to `https://api.lightsrequest.com/plugin/position` (~2/s while
-playing). Capped at 5% CPU / 48 MB, Nice 19, idle IO, runs as `fpp` with only
+playing). Capped at 5% CPU / 96 MB, Nice 19, idle IO, runs as `fpp` with only
 `CAP_NET_RAW`; offline-safe (2 s timeouts, latest-state-only, backoff).
+
+It also keeps LightsRequest's copy of the show audio current: **only while FPP
+is idle** (no MultiSync for 60 s and fppd `idle`), every 10 min it compares the
+audio of every playlist with the server (`/plugin/media-check`, by file size)
+and uploads new/changed files (`/plugin/media-upload` → R2) at ~2 MB/s,
+aborting mid-file if a show starts. Video items have their audio track
+extracted to RAM (`/tmp`) with ffmpeg first. Just add songs to FPP as usual.
 
 ```bash
 systemctl status lightsrequest-audio-sync          # health

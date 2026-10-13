@@ -21,7 +21,7 @@ SAFETY — this runs on the show controller, so it is deliberately inert:
 
 Usage: lightsrequest_audio_sync.py [--iface eth0] [--config /home/fpp/media/config/plugin.lightsrequest-fpp-plugin]
 """
-import argparse, json, os, re, socket, struct, sys, threading, time, urllib.parse, urllib.request
+import argparse, hashlib, json, os, re, socket, struct, subprocess, sys, threading, time, urllib.parse, urllib.request
 
 ETH_P_ALL = 0x0003
 SO_ATTACH_FILTER = 26
@@ -30,6 +30,14 @@ WINDOW_S = 5.0
 STEADY_AFTER_S = 5.0
 SEND_PLAYING_S = 0.5
 SEND_IDLE_S = 10.0
+UA = "LightsRequest-FPP-AudioSync/1.0"  # Cloudflare's bot protection 403s Python-urllib's default UA
+MEDIA_DIRS = ("/home/fpp/media/music", "/home/fpp/media/videos")
+VIDEO_EXTS = {".mov", ".mp4", ".mkv", ".avi", ".m4v", ".webm"}
+AUDIO_EXTS = {".mp3", ".m4a", ".aac", ".wav", ".ogg", ".flac"}
+UPLOAD_FIRST_S = 120        # first check after boot
+UPLOAD_EVERY_S = 600        # then every 10 minutes
+UPLOAD_IDLE_FOR_S = 60      # FPP must have been idle this long
+UPLOAD_RATE_BPS = 2_000_000 # ~2 MB/s
 # tcpdump -dd "udp dst port 32320"  (generated on FPP 10.1, Pi 4)
 BPF = [
     (0x28, 0, 0, 0x0000000c), (0x15, 0, 4, 0x000086dd), (0x30, 0, 0, 0x00000014),
@@ -82,8 +90,10 @@ class Tracker:
         self.delay_obs = None      # {"media", "delay_s"} pending send
         self.changed = threading.Event()
         self.song_changed = False
+        self.last_rx_ms = 0.0
 
     def on_packet(self, t_ms, sp, ft, secs, name):
+        self.last_rx_ms = t_ms
         with self.lock:
             if ft == 1:  # media
                 if sp in (0, 3):
@@ -234,8 +244,7 @@ def sender(tr, base, token, request_playlist):
             req = urllib.request.Request(url, data=json.dumps(r).encode(), method="POST",
                                          headers={"Content-Type": "application/json",
                                                   "Authorization": "Bearer " + token,
-                                                  # Cloudflare's bot protection 403s Python-urllib's default UA
-                                                  "User-Agent": "LightsRequest-FPP-AudioSync/1.0"})
+                                                  "User-Agent": UA})
             urllib.request.urlopen(req, timeout=2).read()
             last_send = time.time()
             if "delay_obs" in r:
@@ -280,6 +289,132 @@ def capture(tr, iface):
         tr.on_packet(t_ms, sp, ft, secs, name)
 
 
+# ---------------------------------------------------------------------------
+# Audio upload: keeps LightsRequest's copy of the show audio in step with FPP.
+# Runs ONLY while FPP is idle; aborts mid-file the moment a show starts.
+# ---------------------------------------------------------------------------
+class ShowStarted(Exception):
+    pass
+
+
+def fpp_idle(tr):
+    if tr.playing or time.time() * 1000 - tr.last_rx_ms < UPLOAD_IDLE_FOR_S * 1000:
+        return False
+    try:
+        st = json.load(urllib.request.urlopen("http://127.0.0.1/api/fppd/status", timeout=2))
+        return st.get("status_name") == "idle"
+    except Exception:
+        return False
+
+
+def playlist_media():
+    names = set()
+    for pl in json.load(urllib.request.urlopen("http://127.0.0.1/api/playlists", timeout=3)):
+        try:
+            d = json.load(urllib.request.urlopen(
+                "http://127.0.0.1/api/playlist/" + urllib.parse.quote(pl), timeout=3))
+        except Exception:
+            continue
+        for sec in ("leadIn", "mainPlaylist", "leadOut"):
+            for e in d.get(sec, []):
+                if e.get("mediaName"):
+                    names.add(e["mediaName"])
+    out = []
+    for n in sorted(names):
+        ext = os.path.splitext(n)[1].lower()
+        if ext not in AUDIO_EXTS | VIDEO_EXTS:
+            continue
+        for d in MEDIA_DIRS:
+            p = os.path.join(d, n)
+            if os.path.isfile(p):
+                out.append({"media_name": n, "bytes": os.path.getsize(p), "path": p})
+                break
+    return out
+
+
+def post_json(url, token, body, timeout=10):
+    req = urllib.request.Request(url, data=json.dumps(body).encode(), method="POST",
+                                 headers={"Content-Type": "application/json", "User-Agent": UA,
+                                          "Authorization": "Bearer " + token})
+    return json.load(urllib.request.urlopen(req, timeout=timeout))
+
+
+def upload_one(tr, base, token, f):
+    src, ext, tmp = f["path"], os.path.splitext(f["path"])[1].lower(), None
+    if ext in VIDEO_EXTS:
+        # Browsers can't reliably decode audio from a video container: extract the
+        # audio track to RAM (/tmp is tmpfs). Stream copy keeps timing identical.
+        tmp = "/tmp/lr_upload_audio.m4a"
+        ok = subprocess.run(["nice", "-n", "19", "ffmpeg", "-v", "error", "-y", "-i", src, "-vn",
+                             "-c:a", "copy", tmp]).returncode == 0
+        if not ok:
+            ok = subprocess.run(["nice", "-n", "19", "ffmpeg", "-v", "error", "-y", "-i", src, "-vn",
+                                 "-c:a", "aac", "-b:a", "192k", tmp]).returncode == 0
+        if not ok:
+            raise RuntimeError("no audio track")
+        src, ext = tmp, ".m4a"
+    try:
+        size = os.path.getsize(src)
+        h = hashlib.sha256()
+        with open(src, "rb") as fh:
+            for chunk in iter(lambda: fh.read(1 << 16), b""):
+                h.update(chunk)
+
+        def body():
+            sent, t0 = 0, time.time()
+            with open(src, "rb") as fh:
+                for chunk in iter(lambda: fh.read(1 << 16), b""):
+                    if tr.playing:
+                        raise ShowStarted()
+                    yield chunk
+                    sent += len(chunk)
+                    ahead = sent / UPLOAD_RATE_BPS - (time.time() - t0)
+                    if ahead > 0:
+                        time.sleep(ahead)
+
+        req = urllib.request.Request(base.rstrip("/") + "/plugin/media-upload", data=body(), method="POST",
+                                     headers={"Content-Type": "application/octet-stream", "User-Agent": UA,
+                                              "Authorization": "Bearer " + token,
+                                              "Content-Length": str(size),
+                                              "X-Media-Name": urllib.parse.quote(f["media_name"]),
+                                              "X-Media-Sha256": h.hexdigest(), "X-Media-Ext": ext,
+                                              "X-Source-Bytes": str(f["bytes"])})
+        urllib.request.urlopen(req, timeout=120).read()
+        return size
+    finally:
+        if tmp and os.path.exists(tmp):
+            os.remove(tmp)
+
+
+def uploader(tr, base, token):
+    time.sleep(UPLOAD_FIRST_S)
+    while True:
+        try:
+            if fpp_idle(tr):
+                files = playlist_media()
+                res = post_json(base.rstrip("/") + "/plugin/media-check", token,
+                                {"files": [{"media_name": f["media_name"], "bytes": f["bytes"]} for f in files]})
+                missing = set(res.get("missing") or [])
+                todo = [f for f in files if f["media_name"] in missing] if res.get("upload_enabled") else []
+                if todo:
+                    log(f"audio sync: {len(todo)} file(s) to upload")
+                for f in todo[:50]:
+                    if not fpp_idle(tr):
+                        log("audio sync: show started; pausing uploads")
+                        break
+                    try:
+                        n = upload_one(tr, base, token, f)
+                        log(f"audio sync: uploaded {f['media_name']} ({n / 1e6:.1f} MB)")
+                    except ShowStarted:
+                        log("audio sync: show started mid-upload; aborted")
+                        break
+                    except Exception as e:
+                        log(f"audio sync: {f['media_name']} failed ({type(e).__name__}: {e})")
+        except Exception as e:
+            log(f"audio sync check failed ({type(e).__name__})")
+        time.sleep(UPLOAD_EVERY_S)
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--iface", default="eth0")
@@ -307,6 +442,7 @@ def main():
     else:
         threading.Thread(target=sender, args=(tr, base, token, cfg.get("remotePlaylist") or "Requests"),
                          daemon=True).start()
+        threading.Thread(target=uploader, args=(tr, base, token), daemon=True).start()
     capture(tr, a.iface)
 
 
