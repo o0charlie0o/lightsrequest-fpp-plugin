@@ -108,3 +108,22 @@ For issues with this fork, please open an issue at
 
 For issues with the upstream SaaS plugin, file at
 <https://github.com/Remote-Falcon/remote-falcon-plugin/issues>.
+
+## Synced show audio (LightsRequest "Listen on your phone")
+
+`lightsrequest_audio_sync.py` runs as the `lightsrequest-audio-sync` systemd
+service (installed automatically by `scripts/install_audio_sync.sh` from the
+install + postStart hooks). It **passively** reads copies of the MultiSync
+packets fppd already sends (AF_PACKET + a kernel BPF filter for UDP 32320 — it
+never binds port 32320, sends nothing on the show network, and changes no FPP
+settings, so MultiSync remotes are unaffected) and POSTs the live audio
+position to `https://api.lightsrequest.com/plugin/position` (~2/s while
+playing). Capped at 5% CPU / 48 MB, Nice 19, idle IO, runs as `fpp` with only
+`CAP_NET_RAW`; offline-safe (2 s timeouts, latest-state-only, backoff).
+
+```bash
+systemctl status lightsrequest-audio-sync          # health
+journalctl -u lightsrequest-audio-sync -n 20       # log
+sudo systemctl disable --now lightsrequest-audio-sync   # kill switch
+python3 lightsrequest_audio_sync.py --dry-run      # print positions, post nothing
+```

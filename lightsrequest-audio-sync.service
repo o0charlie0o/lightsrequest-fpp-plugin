@@ -1,0 +1,27 @@
+# LightsRequest synced show audio — passive FPP MultiSync position reporter.
+# Installed by scripts/install_audio_sync.sh (from fpp_install.sh + postStart.sh).
+# Hard resource caps so it can never compete with fppd: 5% of one core, 48 MB,
+# lowest CPU/IO priority, runs as fpp with only CAP_NET_RAW (for the passive
+# AF_PACKET capture — it never binds UDP 32320 or sends on the show network).
+[Unit]
+Description=LightsRequest synced audio position reporter (passive MultiSync capture)
+After=network-online.target fppd.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=fpp
+Group=fpp
+ExecStart=/usr/bin/python3 -u /home/fpp/media/plugins/lightsrequest-fpp-plugin/lightsrequest_audio_sync.py
+AmbientCapabilities=CAP_NET_RAW
+CapabilityBoundingSet=CAP_NET_RAW
+NoNewPrivileges=yes
+CPUQuota=5%
+MemoryMax=48M
+Nice=19
+IOSchedulingClass=idle
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

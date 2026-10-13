@@ -21,6 +21,9 @@ fi
 chown fpp:fpp "$SETTINGS_FILE" 2>/dev/null || true
 chmod 664 "$SETTINGS_FILE" 2>/dev/null || true
 
+# Synced show audio reporter (systemd service, resource-capped).
+/home/fpp/media/plugins/lightsrequest-fpp-plugin/scripts/install_audio_sync.sh
+
 setSetting restartFlag 1
 
 #fpp_install
