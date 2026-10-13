@@ -38,6 +38,7 @@ UPLOAD_FIRST_S = 120        # first check after boot
 UPLOAD_EVERY_S = 600        # then every 10 minutes
 UPLOAD_IDLE_FOR_S = 60      # FPP must have been idle this long
 UPLOAD_RATE_BPS = 2_000_000 # ~2 MB/s
+UPLOAD_MAX_BYTES = 60 * 1024 * 1024  # server cap; bigger (e.g. a 44-min event medley) is useless on a phone anyway
 # tcpdump -dd "udp dst port 32320"  (generated on FPP 10.1, Pi 4)
 BPF = [
     (0x28, 0, 0, 0x0000000c), (0x15, 0, 4, 0x000086dd), (0x30, 0, 0, 0x00000014),
@@ -327,7 +328,9 @@ def playlist_media():
         for d in MEDIA_DIRS:
             p = os.path.join(d, n)
             if os.path.isfile(p):
-                out.append({"media_name": n, "bytes": os.path.getsize(p), "path": p})
+                st = os.stat(p)
+                # mtime catches same-size edits (e.g. a bleeped word re-exported)
+                out.append({"media_name": n, "bytes": st.st_size, "mtime": int(st.st_mtime), "path": p})
                 break
     return out
 
@@ -378,7 +381,8 @@ def upload_one(tr, base, token, f):
                                               "Content-Length": str(size),
                                               "X-Media-Name": urllib.parse.quote(f["media_name"]),
                                               "X-Media-Sha256": h.hexdigest(), "X-Media-Ext": ext,
-                                              "X-Source-Bytes": str(f["bytes"])})
+                                              "X-Source-Bytes": str(f["bytes"]),
+                                              "X-Source-Mtime": str(f["mtime"])})
         urllib.request.urlopen(req, timeout=120).read()
         return size
     finally:
@@ -387,15 +391,22 @@ def upload_one(tr, base, token, f):
 
 
 def uploader(tr, base, token):
+    skipped_big = set()
     time.sleep(UPLOAD_FIRST_S)
     while True:
         try:
             if fpp_idle(tr):
                 files = playlist_media()
                 res = post_json(base.rstrip("/") + "/plugin/media-check", token,
-                                {"files": [{"media_name": f["media_name"], "bytes": f["bytes"]} for f in files]})
+                                {"files": [{"media_name": f["media_name"], "bytes": f["bytes"], "mtime": f["mtime"]}
+                                           for f in files]})
                 missing = set(res.get("missing") or [])
                 todo = [f for f in files if f["media_name"] in missing] if res.get("upload_enabled") else []
+                big = [f for f in todo if f["bytes"] > UPLOAD_MAX_BYTES and f["media_name"] not in skipped_big]
+                for f in big:
+                    log(f"audio sync: skipping {f['media_name']} ({f['bytes'] / 1e6:.0f} MB > cap)")
+                    skipped_big.add(f["media_name"])
+                todo = [f for f in todo if f["bytes"] <= UPLOAD_MAX_BYTES]
                 if todo:
                     log(f"audio sync: {len(todo)} file(s) to upload")
                 for f in todo[:50]:
@@ -404,7 +415,7 @@ def uploader(tr, base, token):
                         break
                     try:
                         n = upload_one(tr, base, token, f)
-                        log(f"audio sync: uploaded {f['media_name']} ({n / 1e6:.1f} MB)")
+                        log(f"audio sync: synced {f['media_name']} ({n / 1e6:.1f} MB)")
                     except ShowStarted:
                         log("audio sync: show started mid-upload; aborted")
                         break

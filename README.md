@@ -123,10 +123,13 @@ playing). Capped at 5% CPU / 96 MB, Nice 19, idle IO, runs as `fpp` with only
 
 It also keeps LightsRequest's copy of the show audio current: **only while FPP
 is idle** (no MultiSync for 60 s and fppd `idle`), every 10 min it compares the
-audio of every playlist with the server (`/plugin/media-check`, by file size)
+audio of every playlist with the server (`/plugin/media-check`, by file size + mtime;
+the server then compares the sha256, so a bleeped-word edit at the same size is caught
+and a merely touched file isn't re-stored)
 and uploads new/changed files (`/plugin/media-upload` → R2) at ~2 MB/s,
 aborting mid-file if a show starts. Video items have their audio track
-extracted to RAM (`/tmp`) with ffmpeg first. Just add songs to FPP as usual.
+extracted to RAM (`/tmp`) with ffmpeg first. Files over 60 MB are skipped (a
+phone can't decode that much audio). Just add or edit songs in FPP as usual.
 
 ```bash
 systemctl status lightsrequest-audio-sync          # health
