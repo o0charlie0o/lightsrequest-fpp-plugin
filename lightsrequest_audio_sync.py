@@ -176,6 +176,14 @@ class Tracker:
                 self.delay_obs = None
 
 
+def playlist_entries(name):
+    d = json.load(urllib.request.urlopen(
+        "http://127.0.0.1/api/playlist/" + urllib.parse.quote(name), timeout=2))
+    return [{"seq": e.get("sequenceName"), "media": e.get("mediaName") or None,
+             "duration": e.get("duration")}
+            for e in d.get("mainPlaylist", []) if e.get("type") in ("both", "sequence", "media")]
+
+
 def fpp_playlist():
     """Two tiny local GETs per song change: running playlist + FPP's index."""
     try:
@@ -185,21 +193,18 @@ def fpp_playlist():
         idx = int(cp.get("index") or 0)
         if not name:
             return None
-        d = json.load(urllib.request.urlopen(
-            "http://127.0.0.1/api/playlist/" + urllib.parse.quote(name), timeout=2))
-        es = [{"seq": e.get("sequenceName"), "media": e.get("mediaName") or None,
-               "duration": e.get("duration")}
-              for e in d.get("mainPlaylist", []) if e.get("type") in ("both", "sequence", "media")]
-        return {"name": name, "index": idx, "entries": es}
+        return {"name": name, "index": idx, "entries": playlist_entries(name)}
     except Exception:
         return None
 
 
-def sender(tr, base, token):
+def sender(tr, base, token, request_playlist):
     url = base.rstrip("/") + "/plugin/position"
     backoff = 1.0
     last_send = 0.0
     playlist = None
+    request_playing = False
+    req_entries_at = 0.0
     while True:
         snap_peek = tr.playing
         tr.changed.wait(timeout=SEND_PLAYING_S if snap_peek else SEND_IDLE_S)
@@ -210,9 +215,21 @@ def sender(tr, base, token):
         r, song_changed = tr.snapshot()
         if song_changed or playlist is None:
             pl = fpp_playlist()
-            if pl:
+            if pl and pl["name"] == request_playlist:
+                # A viewer request (the plugin inserts its own playlist). Keep the
+                # main playlist + index: that's where FPP resumes afterwards.
+                request_playing = True
+            elif pl:
+                request_playing = False
                 playlist = pl
                 r["playlist"] = pl
+        r["request_playing"] = request_playing
+        if request_playlist and now - req_entries_at > 600:
+            try:  # seq->media map of the request playlist, so queued requests can preload
+                r["request_entries"] = playlist_entries(request_playlist)
+                req_entries_at = now
+            except Exception:
+                req_entries_at = now - 540  # retry in a minute
         try:
             req = urllib.request.Request(url, data=json.dumps(r).encode(), method="POST",
                                          headers={"Content-Type": "application/json",
@@ -288,7 +305,8 @@ def main():
                 log(json.dumps(r) + (" SONG-CHANGED" if chg else ""))
         threading.Thread(target=printer, daemon=True).start()
     else:
-        threading.Thread(target=sender, args=(tr, base, token), daemon=True).start()
+        threading.Thread(target=sender, args=(tr, base, token, cfg.get("remotePlaylist") or "Requests"),
+                         daemon=True).start()
     capture(tr, a.iface)
 
 
